@@ -35,8 +35,9 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional
     public CategoryResponse createCategory(CategoryRequest request, User user) {
-        // Enforce uniqueness per user against all visible categories
-        if (categoryRepository.findVisibleByNameAndUser(request.getName(), user).isPresent()) {
+        // Enforce uniqueness per user against custom and default categories
+        if (categoryRepository.existsByNameAndUserAndIsDeletedFalse(request.getName(), user) ||
+            categoryRepository.existsByNameAndIsCustomFalse(request.getName())) {
             throw new ResourceAlreadyExistsException(
                     "Category '" + request.getName() + "' already exists");
         }
@@ -55,8 +56,9 @@ public class CategoryServiceImpl implements CategoryService {
     @Override
     @Transactional
     public void deleteCategory(String name, User user) {
-        // Try to find any visible category first
-        Category category = categoryRepository.findVisibleByNameAndUser(name, user)
+        // Try to find custom category first, then fallback to visible search to ensure 403 on default categories
+        Category category = categoryRepository.findByNameAndUser(name, user)
+                .or(() -> categoryRepository.findVisibleByNameAndUser(name, user))
                 .orElseThrow(() -> new ResourceNotFoundException(
                         "Category '" + name + "' not found"));
 

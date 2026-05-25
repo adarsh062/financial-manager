@@ -34,6 +34,10 @@ public class GoalServiceImpl implements GoalService {
                 ? request.getStartDate()
                 : LocalDate.now();
 
+        if (startDate.isAfter(request.getTargetDate())) {
+            throw new IllegalArgumentException("Start date cannot be after target date");
+        }
+
         Goal goal = Goal.builder()
                 .goalName(request.getGoalName())
                 .targetAmount(request.getTargetAmount())
@@ -63,9 +67,24 @@ public class GoalServiceImpl implements GoalService {
     @Transactional
     public GoalResponse updateGoal(Long id, GoalUpdateRequest request, User user) {
         Goal goal = findOwnedGoal(id, user);
-        // Only targetAmount and targetDate are updatable
-        goal.setTargetAmount(request.getTargetAmount());
-        goal.setTargetDate(request.getTargetDate());
+
+        if (request.getTargetAmount() != null) {
+            if (request.getTargetAmount().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException("Target amount must be greater than 0");
+            }
+            goal.setTargetAmount(request.getTargetAmount());
+        }
+        if (request.getTargetDate() != null) {
+            if (!request.getTargetDate().isAfter(LocalDate.now())) {
+                throw new IllegalArgumentException("Target date must be in the future");
+            }
+            goal.setTargetDate(request.getTargetDate());
+        }
+
+        if (goal.getStartDate().isAfter(goal.getTargetDate())) {
+            throw new IllegalArgumentException("Start date cannot be after target date");
+        }
+
         return toResponse(goalRepository.save(goal), user);
     }
 
@@ -80,8 +99,18 @@ public class GoalServiceImpl implements GoalService {
 
     private Goal findOwnedGoal(Long id, User user) {
         return goalRepository.findByIdAndUser(id, user)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        "Goal not found with id: " + id));
+                .orElseGet(() -> {
+                    Goal goal = goalRepository.findById(id)
+                            .orElseThrow(() -> new ResourceNotFoundException(
+                                    "Goal not found with id: " + id
+                            ));
+                    if (!goal.getUser().getId().equals(user.getId())) {
+                        throw new com.adarsh.financemanager.exception.ForbiddenAccessException(
+                                "You do not have permission to access this goal"
+                        );
+                    }
+                    return goal;
+                });
     }
 
     /**
@@ -117,15 +146,29 @@ public class GoalServiceImpl implements GoalService {
             remainingAmount = BigDecimal.ZERO;
         }
 
+        BigDecimal formattedProgress = currentProgress.compareTo(BigDecimal.ZERO) == 0
+                ? new BigDecimal("0")
+                : currentProgress.setScale(2, RoundingMode.HALF_UP);
+
+        BigDecimal formattedRemaining = remainingAmount.compareTo(BigDecimal.ZERO) == 0
+                ? new BigDecimal("0")
+                : remainingAmount.setScale(2, RoundingMode.HALF_UP);
+
+        BigDecimal roundedPercentage = progressPercentage.setScale(2, RoundingMode.HALF_UP);
+        BigDecimal strippedPercentage = roundedPercentage.stripTrailingZeros();
+        BigDecimal formattedPercentage = strippedPercentage.scale() < 1
+                ? strippedPercentage.setScale(1, RoundingMode.HALF_UP)
+                : strippedPercentage;
+
         return GoalResponse.builder()
                 .id(goal.getId())
                 .goalName(goal.getGoalName())
-                .targetAmount(targetAmount)
+                .targetAmount(targetAmount.setScale(2, RoundingMode.HALF_UP))
                 .targetDate(goal.getTargetDate())
                 .startDate(goal.getStartDate())
-                .currentProgress(currentProgress.setScale(2, RoundingMode.HALF_UP))
-                .progressPercentage(progressPercentage)
-                .remainingAmount(remainingAmount.setScale(2, RoundingMode.HALF_UP))
+                .currentProgress(formattedProgress)
+                .progressPercentage(formattedPercentage)
+                .remainingAmount(formattedRemaining)
                 .build();
     }
 }

@@ -23,6 +23,10 @@ public class ReportServiceImpl implements ReportService {
 
     @Override
     public MonthlyReportResponse getMonthlyReport(User user, int year, int month) {
+        if (month < 1 || month > 12) {
+            throw new IllegalArgumentException("Month must be between 1 and 12");
+        }
+
         Map<String, BigDecimal> incomeMap = toMap(
                 transactionRepository.getMonthlyGroupedByCategory(user, year, month, CategoryType.INCOME));
         Map<String, BigDecimal> expensesMap = toMap(

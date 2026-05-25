@@ -86,7 +86,7 @@ class TransactionServiceImplTest {
     @Test
     @DisplayName("getTransactions: returns list with filters")
     void getTransactions_returnsFilteredList() {
-        when(transactionRepository.findFiltered(eq(user), any(), any(), any()))
+        when(transactionRepository.findByUserOrderByDateDesc(user))
                 .thenReturn(List.of(transaction));
 
         List<TransactionResponse> result = transactionService.getTransactions(user, null, null, null);

@@ -108,9 +108,15 @@ public class TransactionServiceImpl implements TransactionService {
         Transaction transaction =
                 findOwnedTransaction(id, user);
 
-
-        transaction.setAmount(request.getAmount());
-        transaction.setDescription(request.getDescription());
+        if (request.getAmount() != null) {
+            if (request.getAmount().compareTo(java.math.BigDecimal.ZERO) <= 0) {
+                throw new IllegalArgumentException("Amount must be greater than 0");
+            }
+            transaction.setAmount(request.getAmount());
+        }
+        if (request.getDescription() != null) {
+            transaction.setDescription(request.getDescription());
+        }
 
         return TransactionResponse.from(
                 transactionRepository.save(transaction)
@@ -152,20 +158,18 @@ public class TransactionServiceImpl implements TransactionService {
             Long id,
             User user
     ) {
-
-        Transaction transaction = transactionRepository.findById(id)
-                .orElseThrow(() ->
-                        new ResourceNotFoundException(
-                                "Transaction not found with id: " + id
-                        )
-                );
-
-        if (!transaction.getUser().getId().equals(user.getId())) {
-            throw new com.adarsh.financemanager.exception.ForbiddenAccessException(
-                    "You do not have permission to access this transaction"
-            );
-        }
-
-        return transaction;
+        return transactionRepository.findByIdAndUser(id, user)
+                .orElseGet(() -> {
+                    Transaction transaction = transactionRepository.findById(id)
+                            .orElseThrow(() -> new ResourceNotFoundException(
+                                    "Transaction not found with id: " + id
+                            ));
+                    if (!transaction.getUser().getId().equals(user.getId())) {
+                        throw new com.adarsh.financemanager.exception.ForbiddenAccessException(
+                                "You do not have permission to access this transaction"
+                        );
+                    }
+                    return transaction;
+                });
     }
 }

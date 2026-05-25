@@ -103,6 +103,31 @@ public class GlobalExceptionHandler {
         return buildError("Invalid username or password", HttpStatus.UNAUTHORIZED);
     }
 
+    // ── 400 Constraint Violation ──────────────────────────────────────────────
+    @ExceptionHandler(jakarta.validation.ConstraintViolationException.class)
+    public ResponseEntity<Map<String, String>> handleConstraintViolation(
+            jakarta.validation.ConstraintViolationException ex
+    ) {
+        return buildError(ex.getMessage(), HttpStatus.BAD_REQUEST);
+    }
+
+    // ── 400 Method Argument Type Mismatch ──────────────────────────────────────
+    @ExceptionHandler(org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<Map<String, String>> handleTypeMismatch(
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException ex
+    ) {
+        String message = "Invalid parameter value for: " + ex.getName();
+        return buildError(message, HttpStatus.BAD_REQUEST);
+    }
+
+    // ── 401 Authentication Failure ─────────────────────────────────────────────
+    @ExceptionHandler(org.springframework.security.core.AuthenticationException.class)
+    public ResponseEntity<Map<String, String>> handleAuthenticationException(
+            org.springframework.security.core.AuthenticationException ex
+    ) {
+        return buildError(ex.getMessage() != null ? ex.getMessage() : "Unauthorized", HttpStatus.UNAUTHORIZED);
+    }
+
     // ── 500 Generic fallback ──────────────────────────────────────────────────
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, String>> handleGenericException(
@@ -110,6 +135,7 @@ public class GlobalExceptionHandler {
     ) {
         return buildError("An unexpected error occurred", HttpStatus.INTERNAL_SERVER_ERROR);
     }
+
 
     // ── Helper ────────────────────────────────────────────────────────────────
     private ResponseEntity<Map<String, String>> buildError(String message, HttpStatus status) {
