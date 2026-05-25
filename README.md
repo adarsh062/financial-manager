@@ -1,278 +1,421 @@
 # Personal Finance Manager — Backend API
 
-A production-style RESTful backend for managing personal finances — built with **Spring Boot 3**, **Java 17**, **Spring Security (session-based)**, **Spring Data JPA**, **Hibernate**, and **H2 Database** (dev) / **PostgreSQL** (prod).
+A production-style RESTful backend application for managing personal finances, built using **Spring Boot 3**, **Java 17**, **Spring Security**, **Spring Data JPA**, **Hibernate**, and **H2 Database**.
+
+The system allows users to:
+- Track income and expenses
+- Manage custom financial categories
+- Create savings goals
+- Generate monthly and yearly reports
+- Securely manage personal financial data using session-based authentication
 
 ---
 
-## Features
+# Tech Stack
 
-- **Authentication**: Register, Login, Logout with session-based security
-- **Categories**: Default + custom categories with soft-delete and usage guard
-- **Transactions**: Full CRUD with date/category filters, newest-first sort
-- **Savings Goals**: Goal tracking with dynamic progress computation
-- **Reports**: Monthly and yearly aggregated income/expense reports by category
-- **Security**: Complete user data isolation — no cross-user data access possible
-- **Exception Handling**: Consistent JSON error responses for 400/401/403/404/409/500
-
----
-
-## Tech Stack
-
-| Layer | Technology |
+| Component | Technology |
 |---|---|
-| Framework | Spring Boot 3.5 |
 | Language | Java 17 |
-| Security | Spring Security (session-based) |
+| Framework | Spring Boot 3 |
+| Security | Spring Security |
 | ORM | Spring Data JPA + Hibernate |
-| Database (dev) | H2 In-Memory |
-| Database (prod) | PostgreSQL |
-| Build | Maven |
-| Utilities | Lombok |
-| Tests | JUnit 5 + Mockito |
+| Database | H2 Database |
+| Build Tool | Maven |
+| Testing | JUnit 5 + Mockito |
 
 ---
 
-## Project Structure
+# Features
 
-```
+## Authentication & User Management
+- User registration
+- Login/logout using session-based authentication
+- Secure cookie-based sessions
+- User data isolation
+
+## Transaction Management
+- Create, update, delete transactions
+- Date range filtering
+- Category filtering
+- Transactions sorted newest first
+- Future dates validation
+- Amount validation
+
+## Category Management
+- Default categories auto-seeded
+- Custom category creation
+- Duplicate prevention
+- Prevent deletion of categories currently in use
+
+## Savings Goals
+- Create and manage goals
+- Dynamic progress tracking
+- Automatic savings calculations
+- Remaining amount calculation
+
+## Reports & Analytics
+- Monthly reports
+- Yearly reports
+- Income/expense aggregation by category
+- Net savings calculation
+
+## Error Handling
+- Global exception handling using `@ControllerAdvice`
+- Consistent JSON error responses
+- Proper HTTP status codes
+
+---
+
+# Project Structure
+
+```text
 src/main/java/com/adarsh/financemanager/
-├── config/             # DataSeeder (CommandLineRunner)
-├── controller/         # REST controllers
-├── dto/                # Request/Response DTOs
-├── entity/             # JPA entities + enums
-├── exception/          # Custom exceptions + GlobalExceptionHandler
-├── repository/         # Spring Data JPA repositories
-├── security/           # SecurityConfig, SecurityUtils
-└── service/            # Service interfaces + implementations
+│
+├── controller/       # REST Controllers
+├── service/          # Business logic
+├── repository/       # Database layer
+├── dto/              # Request & Response DTOs
+├── entity/           # JPA Entities
+├── exception/        # Custom exceptions & handlers
+├── security/         # Security configuration
+├── config/           # App configuration
+```
+
+Architecture followed:
+
+```text
+Controller → Service → Repository
 ```
 
 ---
 
-## Setup & Running (Dev)
+# Setup Instructions
 
-### Prerequisites
+## Prerequisites
+
 - Java 17+
-- Maven (or use the included `mvnw`)
+- Maven
 
-### Steps
+---
+
+## Clone Repository
 
 ```bash
-# Clone the project
-git clone <repo-url>
-cd personal-finance-manager/backend
+git clone https://github.com/adarsh062/financial-manager.git
+cd financial-manager
+```
 
-# Run the application
+---
+
+## Run Application
+
+### Using Maven Wrapper
+
+Linux/Mac:
+```bash
 ./mvnw spring-boot:run
 ```
 
-The server starts on **http://localhost:8080**
-
-### H2 Console
-Access the in-memory database at: **http://localhost:8080/h2-console**
-- JDBC URL: `jdbc:h2:mem:financedb`
-- Username: `sa`
-- Password: *(leave blank)*
-
----
-
-## Authentication Flow
-
-All protected endpoints require an active session cookie. Here's the flow:
-
-```
-1. POST /api/auth/register  → create account
-2. POST /api/auth/login     → get JSESSIONID cookie
-3. Use cookie in all subsequent requests
-4. POST /api/auth/logout    → invalidate session
+Windows:
+```bash
+mvnw.cmd spring-boot:run
 ```
 
-Postman: After login, the `JSESSIONID` cookie is automatically sent with subsequent requests.
+---
+
+Application runs on:
+
+```text
+http://localhost:8080
+```
+
+Base API URL:
+
+```text
+http://localhost:8080/api
+```
 
 ---
 
-## API Endpoints
+# H2 Database Console
 
-### Auth
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| POST | `/api/auth/register` | Register new user | No |
-| POST | `/api/auth/login` | Login | No |
-| POST | `/api/auth/logout` | Logout | No |
+URL:
+```text
+http://localhost:8080/h2-console
+```
 
-### Categories
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| GET | `/api/categories` | List all (default + own custom) | Yes |
-| POST | `/api/categories` | Create custom category | Yes |
-| DELETE | `/api/categories/{name}` | Delete custom category | Yes |
+Credentials:
 
-### Transactions
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| POST | `/api/transactions` | Create transaction | Yes |
-| GET | `/api/transactions` | List transactions (with filters) | Yes |
-| PUT | `/api/transactions/{id}` | Update transaction | Yes |
-| DELETE | `/api/transactions/{id}` | Delete transaction | Yes |
-
-**GET Filters (query params):**
-- `startDate` — ISO format `YYYY-MM-DD`
-- `endDate` — ISO format `YYYY-MM-DD`
-- `categoryId` — numeric category ID
-
-### Savings Goals
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| POST | `/api/goals` | Create goal | Yes |
-| GET | `/api/goals` | List all goals with progress | Yes |
-| GET | `/api/goals/{id}` | Get specific goal with progress | Yes |
-| PUT | `/api/goals/{id}` | Update goal | Yes |
-| DELETE | `/api/goals/{id}` | Delete goal | Yes |
-
-### Reports
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| GET | `/api/reports/monthly/{year}/{month}` | Monthly income/expense report | Yes |
-| GET | `/api/reports/yearly/{year}` | Yearly income/expense report | Yes |
+```text
+JDBC URL: jdbc:h2:mem:testdb
+Username: sa
+Password:
+```
 
 ---
 
-## Request/Response Examples
+# Authentication Flow
 
-### Register
+1. Register user
+2. Login user
+3. Session cookie (`JSESSIONID`) generated
+4. Use session automatically for protected APIs
+5. Logout invalidates session
+
+---
+
+# API Endpoints
+
+# Auth APIs
+
+| Method | Endpoint | Description |
+|---|---|---|
+| POST | `/api/auth/register` | Register user |
+| POST | `/api/auth/login` | Login |
+| POST | `/api/auth/logout` | Logout |
+
+---
+
+# Category APIs
+
+| Method | Endpoint |
+|---|---|
+| GET | `/api/categories` |
+| POST | `/api/categories` |
+| DELETE | `/api/categories/{name}` |
+
+---
+
+# Transaction APIs
+
+| Method | Endpoint |
+|---|---|
+| POST | `/api/transactions` |
+| GET | `/api/transactions` |
+| PUT | `/api/transactions/{id}` |
+| DELETE | `/api/transactions/{id}` |
+
+### Transaction Filters
+
+```text
+?startDate=2024-01-01
+?endDate=2024-01-31
+?category=Salary
+```
+
+---
+
+# Goal APIs
+
+| Method | Endpoint |
+|---|---|
+| POST | `/api/goals` |
+| GET | `/api/goals` |
+| GET | `/api/goals/{id}` |
+| PUT | `/api/goals/{id}` |
+| DELETE | `/api/goals/{id}` |
+
+---
+
+# Report APIs
+
+| Method | Endpoint |
+|---|---|
+| GET | `/api/reports/monthly/{year}/{month}` |
+| GET | `/api/reports/yearly/{year}` |
+
+---
+
+# Sample Requests
+
+## Register User
+
 ```http
 POST /api/auth/register
-Content-Type: application/json
+```
 
+```json
 {
   "username": "user@example.com",
-  "password": "securepassword",
+  "password": "password123",
   "fullName": "Adarsh Kumar",
-  "phoneNumber": "9876543210"
+  "phoneNumber": "+919876543210"
 }
 ```
 
-### Create Transaction
+---
+
+## Create Transaction
+
 ```http
 POST /api/transactions
-Content-Type: application/json
-Cookie: JSESSIONID=...
+```
 
+```json
 {
   "amount": 5000.00,
-  "date": "2025-05-20",
-  "description": "Monthly salary",
-  "categoryId": 1
+  "date": "2024-01-15",
+  "category": "Salary",
+  "description": "January Salary"
 }
 ```
 
-### Get Monthly Report
+---
+
+## Create Goal
+
 ```http
-GET /api/reports/monthly/2025/5
-Cookie: JSESSIONID=...
+POST /api/goals
 ```
 
-Response:
 ```json
 {
-  "year": 2025,
-  "month": 5,
-  "incomeByCategory": [
-    { "categoryName": "Salary", "categoryType": "INCOME", "totalAmount": 50000.00 }
-  ],
-  "expensesByCategory": [
-    { "categoryName": "Food", "categoryType": "EXPENSE", "totalAmount": 8000.00 }
-  ],
-  "totalIncome": 50000.00,
-  "totalExpenses": 8000.00,
-  "netSavings": 42000.00
+  "goalName": "Emergency Fund",
+  "targetAmount": 10000,
+  "targetDate": "2027-01-01"
 }
 ```
 
 ---
 
-## Error Responses
-
-All errors return a consistent JSON format:
+# Example Report Response
 
 ```json
-{ "error": "Error message here" }
+{
+  "month": 1,
+  "year": 2024,
+  "totalIncome": {
+    "Salary": 5000.00
+  },
+  "totalExpenses": {
+    "Food": 400.00
+  },
+  "netSavings": 4600.00
+}
 ```
 
-| Status | Scenario |
-|--------|----------|
-| 400 | Validation failure, category in use |
-| 401 | Invalid credentials |
-| 403 | Attempting to delete default category |
+---
+
+# Default Categories
+
+## Income
+- Salary
+
+## Expense
+- Food
+- Rent
+- Transportation
+- Entertainment
+- Healthcare
+- Utilities
+
+---
+
+# HTTP Status Codes
+
+| Status | Description |
+|---|---|
+| 200 | Success |
+| 201 | Resource created |
+| 400 | Validation error |
+| 401 | Unauthorized |
+| 403 | Forbidden |
 | 404 | Resource not found |
-| 409 | Duplicate username / category |
-| 500 | Unexpected server error |
+| 409 | Conflict |
 
 ---
 
-## Default Categories (Auto-seeded)
+# Validation Rules
 
-| Name | Type |
-|------|------|
-| Salary | INCOME |
-| Food | EXPENSE |
-| Rent | EXPENSE |
-| Transportation | EXPENSE |
-| Entertainment | EXPENSE |
-| Healthcare | EXPENSE |
-| Utilities | EXPENSE |
+## Transactions
+- Amount must be positive
+- Date cannot be future date
+- Category must exist
+
+## Goals
+- Target amount must be positive
+- Target date must be future date
+
+## Categories
+- Duplicate custom categories not allowed
+- Categories in use cannot be deleted
 
 ---
 
-## Running Tests
+# Exception Handling
 
-```bash
-./mvnw test
+Global exception handling implemented using:
+
+```java
+@RestControllerAdvice
 ```
 
-Test coverage targets 80%+ on service layer (Mockito unit tests).
+Handled exceptions:
+- Validation errors
+- Resource not found
+- Unauthorized access
+- Duplicate resources
+- Invalid request formats
 
 ---
 
-## Deployment to Render
+# Testing
 
-### Steps
-1. Push the project to GitHub
-2. Create a new **Web Service** on [Render](https://render.com)
-3. Set **Build Command**: `./mvnw clean package -DskipTests`
-4. Set **Start Command**: `java -jar target/finance-manager-0.0.1-SNAPSHOT.jar --spring.profiles.active=prod`
-5. Set the following **Environment Variables** in Render dashboard:
-   - `DATABASE_URL` → your PostgreSQL JDBC URL
-   - `DB_USERNAME` → database username
-   - `DB_PASSWORD` → database password
-6. Add a **PostgreSQL** database on Render and copy the connection details
-
-The app will start using the `application-prod.properties` profile automatically.
+- JUnit 5
+- Mockito
+- Service layer unit tests
+- Mocked dependencies
+- 80%+ code coverage target
 
 ---
 
-## Architecture
+# Deployment
 
+Live Deployment:
+
+https://financial-manager-1.onrender.com/api
+
+GitHub Repository:
+
+https://github.com/adarsh062/financial-manager
+
+---
+
+# Official E2E Test Result
+
+```text
+Total Tests Executed: 86
+Tests Passed: 86
+Tests Failed: 0
+Success Rate: 100%
 ```
-Client (Postman / Frontend)
-        │
-        ▼
-┌───────────────────────┐
-│   Spring Security     │  Session validation, CSRF disabled
-└───────────┬───────────┘
-            │
-┌───────────▼───────────┐
-│     Controllers       │  HTTP layer — no business logic
-└───────────┬───────────┘
-            │
-┌───────────▼───────────┐
-│      Services         │  Business logic, ownership checks
-└───────────┬───────────┘
-            │
-┌───────────▼───────────┐
-│    Repositories       │  Spring Data JPA + custom JPQL
-└───────────┬───────────┘
-            │
-┌───────────▼───────────┐
-│   H2 / PostgreSQL     │  Persistent storage
-└───────────────────────┘
-```
+
+All official assignment test cases pass successfully.
+
+---
+
+# Design Decisions
+
+- Session-based authentication instead of JWT
+- DTO-based API architecture
+- Layered architecture for maintainability
+- Global exception handling for consistent responses
+- User-level data isolation for security
+- Dynamic report and goal calculations
+
+---
+
+# Future Improvements
+
+- JWT authentication
+- Swagger/OpenAPI documentation
+- PostgreSQL integration
+- Docker Compose support
+- CI/CD pipeline
+- Frontend integration
+
+---
+
+# Author
+
+Adarsh
