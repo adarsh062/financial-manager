@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: financial-manager
+    env: java
+    buildCommand: ./mvnw clean install
+    startCommand: java -jar target/*.jar
